@@ -1,0 +1,109 @@
+---
+title: "Practical Machine Learning Assignment"
+author: "frusch"
+date: "Sunday, September 27, 2015"
+output: html_document
+---
+
+Background
+----------
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+
+Data 
+-----
+
+The training data for this project are available here: 
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here: 
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+The data for this project come from this source: http://groupware.les.inf.puc-rio.br/har.
+
+Summary
+-------
+
+The goal of the project is to predict the manner in which they did the exercise. For this purpose were used random forest algorithm. As this method is one of the most accurate methods we expect the out of sample error to be around 4-5%.
+
+Loading and preprocessing
+-------------------------
+
+First step of every data analysis is loading packages and data what we have done by the code below:
+
+```{r}
+library(caret)
+library(e1071)
+library(randomForest)
+data <- read.csv("pml-training.csv", header=TRUE, 
+                na.strings=c("NA", "", "#DIV/0!"))
+subm_data <- read.csv("pml-testing.csv", header=TRUE, 
+                na.strings=c("NA", "", "#DIV/0!"))
+```
+
+As a raw data was provided it's important to clean it up. We have excluded time and aggregate variables:
+
+```{r}
+aggregates <- sapply(data, 
+                      function(x) { sum(is.na(x)) > 0})
+clean_data <- data[,-which(aggregates)]
+clean_data <- clean_data[,-c(1:7)]
+
+aggregates_s <- sapply(subm_data, 
+                      function(x) { sum(is.na(x)) > 0})
+clean_subm_data <- subm_data[,-which(aggregates_s)]
+clean_subm_data <- clean_subm_data[,-c(1:7)]
+```
+
+Next split the data into training and test set by 60/40:
+
+```{r}
+set.seed(117)
+inTrain <- createDataPartition(y=clean_data$classe, p=0.6, list=FALSE)
+train <- clean_data[inTrain,]
+test <- clean_data[-inTrain,]
+```
+
+As random forest method is computationally expensive, we reduce the number of predictors using pca. We used threshold = .95 to explain 95% of the variance.
+
+```{r}
+preProc <- preProcess(clean_data[,1:52],method="pca",thresh=.95)
+trainPC <- predict(preProc,train[,1:52])
+testPC <- predict(preProc,test[,1:52])
+```
+
+Modeling and testing
+--------------------
+
+Building a random forest model:
+
+```{r}
+rf <- randomForest(train$classe ~ .,   data=trainPC, do.trace=FALSE)
+```
+
+Estimate the out of sample error of the model:
+
+```{r}
+confusionMatrix(test$classe,predict(rf,testPC))
+```
+
+As we can the accuracy of the model is 97% (3% error) and has high Sensitivity and Specificity for all classes (93-99%)
+
+Predict results for submission:
+
+```{r}
+subm_dataPC <- predict(preProc,clean_subm_data[,1:52])
+clean_subm_data$classe <- predict(rf,subm_dataPC)
+
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+
+pml_write_files(clean_subm_data$classe)
+```
