@@ -98,7 +98,7 @@ aggregates_s &lt;- sapply(subm_data,
                       function(x) { sum(is.na(x)) &gt; 0})
 clean_subm_data &lt;- subm_data[,-which(aggregates_s)]
 clean_subm_data &lt;- clean_subm_data[,-c(1:7)]</code></pre>
-<p>Next split the data into training and test set by 60/40:</p>
+<p>Next split the data into training and test set by 60/40</p>
 <pre class="r"><code>set.seed(117)
 inTrain &lt;- createDataPartition(y=clean_data$classe, p=0.6, list=FALSE)
 train &lt;- clean_data[inTrain,]

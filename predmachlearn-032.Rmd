@@ -57,7 +57,7 @@ clean_subm_data <- subm_data[,-which(aggregates_s)]
 clean_subm_data <- clean_subm_data[,-c(1:7)]
 ```
 
-Next split the data into training and test set by 60/40:
+Next split the data into training and test set by 60/40
 
 ```{r}
 set.seed(117)
